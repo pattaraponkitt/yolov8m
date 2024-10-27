@@ -160,6 +160,71 @@ class ResourceMonitor:
 
 
 class YOLOTrainerV6:
+    def _init_size_stats(self) -> Dict:
+    """Initialize image size statistics dictionary"""
+    return {
+        'min_width': float('inf'),
+        'min_height': float('inf'),
+        'max_width': 0,
+        'max_height': 0,
+        'mean_width': 0,
+        'mean_height': 0
+    }
+
+    def _get_empty_image_info(self) -> Dict:
+        """Return empty image information dictionary"""
+        return {
+            'total_images': 0,
+            'analyzed_samples': 0,
+            'size_distribution': {},
+            'size_stats': {
+                'min_width': 0,
+                'min_height': 0,
+                'max_width': 0,
+                'max_height': 0,
+                'mean_width': 0,
+                'mean_height': 0
+            },
+            'corrupt_images': []
+        }
+
+    def _update_size_stats(self, stats: Dict, width: int, height: int):
+        """Update image size statistics"""
+        stats['min_width'] = min(stats['min_width'], width)
+        stats['min_height'] = min(stats['min_height'], height)
+        stats['max_width'] = max(stats['max_width'], width)
+        stats['max_height'] = max(stats['max_height'], height)
+        stats['mean_width'] += width
+        stats['mean_height'] += height
+
+    def _calculate_image_stats(
+        self, 
+        total_count: int,
+        valid_samples: int,
+        image_sizes: Dict,
+        size_stats: Dict,
+        corrupt_images: List
+    ) -> Dict:
+        """Calculate final image statistics"""
+        if valid_samples > 0:
+            size_stats['mean_width'] /= valid_samples
+            size_stats['mean_height'] /= valid_samples
+            
+            # Scale up counts to estimate full dataset
+            scale_factor = total_count / valid_samples
+            image_sizes = {
+                size: int(count * scale_factor) 
+                for size, count in image_sizes.items()
+            }
+        
+        return {
+            'total_images': total_count,
+            'analyzed_samples': valid_samples,
+            'size_distribution': dict(image_sizes),
+            'size_stats': size_stats,
+            'corrupt_images': corrupt_images
+        }
+    
     def __init__(self, base_path: str = "/content/drive/MyDrive/btran/container_number"):
         """Initialize YOLO Trainer V6"""
         # Disable wandb
